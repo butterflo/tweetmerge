@@ -1,8 +1,23 @@
+import zipfile
 import json
 import os.path
 from operator import itemgetter
 
 twtpath = "V:\\twt"
+
+zips = [f for f in os.listdir(twtpath) if not os.path.isdir(os.path.join(twtpath,f))]
+zips = [z for z in zips if zipfile.is_zipfile(os.path.join(twtpath,z))]
+for z in zips:
+    zfile = zipfile.ZipFile(os.path.join(twtpath,z))
+    zname = z.replace('.zip','')
+    print z
+    for name in zfile.namelist():
+        (dirname, filename) = os.path.split(name)
+        dir_fullpath = os.path.join(twtpath,zname,dirname)
+        if not os.path.exists(dir_fullpath):
+           os.makedirs(dir_fullpath)
+        zfile.extract(name,os.path.join(twtpath,zname))
+
 dirs = [d for d in os.listdir(twtpath) if os.path.isdir(os.path.join(twtpath, d))]
 
 jsdic = {}
