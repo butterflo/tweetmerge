@@ -1,16 +1,29 @@
 import zipfile, zlib
 import csv, json
 import os.path
+import sys
 from operator import itemgetter
 
-twtpath = "V:\\twt"
+if len(sys.argv) == 1:
+    print ("Tweetmerge merges twitter zip archives.")
+    print ("Usage: tweetmerge dir")
+    exit(1)
+if len(sys.argv) >= 2:
+    twtpath = sys.argv[1]
+    if os.path.isdir(sys.argv[1]):
+        twtpath = sys.argv[1]
+    else:
+        print ("Invalid path:", sys.argv[1])
+        exit(1)
+
+print (twtpath)
 
 zips = [f for f in os.listdir(twtpath) if not os.path.isdir(os.path.join(twtpath,f))]
 zips = [z for z in zips if zipfile.is_zipfile(os.path.join(twtpath,z))]
 for z in zips:
     zfile = zipfile.ZipFile(os.path.join(twtpath,z))
     zname = z.replace('.zip','')
-    print z
+    print (z)
     for name in zfile.namelist():
         (dirname, filename) = os.path.split(name)
         dir_fullpath = os.path.join(twtpath,zname,dirname)
@@ -20,27 +33,27 @@ for z in zips:
 
 dirs = [d for d in os.listdir(twtpath) if os.path.isdir(os.path.join(twtpath, d))]
 
-print "parsing tweets.csv.."
+print ("parsing tweets.csv..")
 csvmerge = []
 for d in dirs:
     csvpath = twtpath + "\\" + d + "\\tweets.csv"
-    with open(csvpath, 'rb') as csvfile:
+    with open(csvpath, 'rt', encoding= 'utf-8') as csvfile:
         csvreader = csv.reader(csvfile,delimiter=',',quotechar='"')
         for row in csvreader:
             csvmerge.append(row)
 
-csvmerge = {v[0]:v for v in csvmerge}.values()
+csvmerge = list({v[0]:v for v in csvmerge}.values())
 csvmerge = sorted(csvmerge,key=itemgetter(0))
 header = csvmerge[len(csvmerge)-1]
 csvmerge = [header] + csvmerge[0:len(csvmerge)-1]
 
-with open(csvpath, 'wb') as csvfile:
+with open(csvpath, 'wt', encoding= 'utf-8') as csvfile:
     csvwriter = csv.writer(csvfile,delimiter=',',quotechar='"',quoting=csv.QUOTE_ALL)
     for row in csvmerge:
         csvwriter.writerow(row)
 
-print str(len(csvmerge)-1) + " tweets parsed."
-print "parsing json.."
+print (str(len(csvmerge)-1) + " tweets parsed.")
+print ("parsing json..")
 
 jsdic = {}
 for d in dirs:
@@ -53,7 +66,7 @@ for d in dirs:
 
 twtcount = 0
 idx_merge = []
-for js in jsdic.keys():
+for js in list(jsdic.keys()):
     json_merge = []
     for fp in jsdic[js]:
         with open(fp,"r") as f:
@@ -61,7 +74,7 @@ for js in jsdic.keys():
         header = content.splitlines(1)[0]
         content = content[len(header):]
         json_merge = json_merge + json.loads(content)
-    json_merge = {v['id']:v for v in json_merge}.values()
+    json_merge = list({v['id']:v for v in json_merge}.values())
     json_merge = sorted(json_merge,key=itemgetter('id'))
 
     twtsize = len(json_merge)
@@ -71,16 +84,16 @@ for js in jsdic.keys():
     dump = json.dumps(json_merge,indent=4)
     with open(dumppath,'w') as w:
         w.write(header)
-        print >> w, dump
+        print(dump, file=w)
 
     idx = {}
-    idx[u'month'] = int(js.split('_')[1].split('.')[0])
-    idx[u'file_name'] = u'data/js/tweets/'+js
-    idx[u'var_name'] = u'tweets_' + js.split('.')[0]
-    idx[u'tweet_count'] = twtsize
-    idx[u'year'] = int(js.split('_')[0])
+    idx['month'] = int(js.split('_')[1].split('.')[0])
+    idx['file_name'] = 'data/js/tweets/'+js
+    idx['var_name'] = 'tweets_' + js.split('.')[0]
+    idx['tweet_count'] = twtsize
+    idx['year'] = int(js.split('_')[0])
     idx_merge.append(idx)
-print str(twtcount) + " tweets indexed."
+print (str(twtcount) + " tweets indexed.")
 
 payloadpath = twtpath + "\\" + d + "\\" + "data\\js\\payload_details.js"
 with open(payloadpath,'r') as f:
@@ -101,6 +114,7 @@ with open(idxpath,'w') as f:
     dump = "var tweet_index = " + json.dumps(idx_merge,indent=4)
     f.write(dump)
 
+print ("writing: output.zip")
 file_paths = []
 with zipfile.ZipFile(os.path.join(twtpath,"output.zip"),mode='w') as z:
     for root, directories, files in os.walk(os.path.join(twtpath,d)):
@@ -111,4 +125,4 @@ with zipfile.ZipFile(os.path.join(twtpath,"output.zip"),mode='w') as z:
         bfp = fp.replace(os.path.join(twtpath,d),"")
         z.write(fp,bfp,compress_type=zipfile.ZIP_DEFLATED)
 
-print "zip ok."
+print ("merge ok.")
