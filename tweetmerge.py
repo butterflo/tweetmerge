@@ -40,7 +40,8 @@ for d in dirs:
     with open(csvpath, 'rt', encoding= 'utf-8') as csvfile:
         csvreader = csv.reader(csvfile,delimiter=',',quotechar='"')
         for row in csvreader:
-            csvmerge.append(row)
+            if len(row) > 0:
+                csvmerge.append(row)
 
 csvmerge = list({v[0]:v for v in csvmerge}.values())
 csvmerge = sorted(csvmerge,key=itemgetter(0))
